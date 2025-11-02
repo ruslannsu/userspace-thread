@@ -16,6 +16,8 @@ uthread_t *uthreads[THREADS_MAX_COUNT];
 
 size_t uthreads_size = 0;
 
+size_t current_uthread = 0;
+
 
 int stack_create(off_t size, int thread_id, void **stack_ptr) {
 	int stack_fd;
@@ -54,8 +56,33 @@ int stack_create(off_t size, int thread_id, void **stack_ptr) {
 }
 
 
-void uthread_func_wrapper(void) {
-    return;
+void uthreads_init(uthread_t *main_thread) {
+    uthreads[0] = main_thread;
+    ++uthreads_size;
+}
+
+
+
+void uthread_func_wrapper() {
+    printf("%s", "hello");
+    fflush(stdout);
+}
+
+void schedule() {
+    int err;
+
+    ucontext_t *cur_ctx = &(uthreads[current_uthread]->uc);
+    current_uthread = (current_uthread + 1) % THREADS_MAX_COUNT;
+
+    ucontext_t *next_ctx = &(uthreads[current_uthread]->uc);
+
+    err = swapcontext(cur_ctx, next_ctx);
+    if (err == -1) {
+        printf("schedule failed: %s ", strerror(errno));
+        exit(3);
+    }
+    printf("there");
+    fflush(stdout);
 }
 
 
@@ -83,15 +110,17 @@ int uthread_create(uthread_t **usl, void (*func)(void*), void *args) {
     uthread_struct_ptr->uc.uc_link = NULL;
 
     makecontext(&uthread_struct_ptr->uc, uthread_func_wrapper, 0);
-
+    
     uthread_struct_ptr->args = args;
     uthread_struct_ptr->func = func;
 
     uthreads[uthreads_size] = uthread_struct_ptr;
+    ++uthreads_size;
     *usl = uthread_struct_ptr;
 
     return 0;
 }
+
 
 
 

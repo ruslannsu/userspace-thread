@@ -12,6 +12,11 @@ typedef struct uthread_t {
     void *args;
 } uthread_t;
 
+
+void uthreads_init();
+
+
 int uthread_create(uthread_t **uthread_struct, void (*func)(void*), void *args);
 
+void schedule();
 
