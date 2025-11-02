@@ -3,8 +3,11 @@
 #define FILE_NAME_SIZE 128
 #define STACK_SIZE 1024 * 10
 
+#include <ucontext.h>
+
 typedef struct uthread_t {
     char *thread_name;
+    ucontext_t uc;
     void (*func)(void*);
     void *args;
 } uthread_t;

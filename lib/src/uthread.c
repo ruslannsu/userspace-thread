@@ -12,7 +12,9 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
-uthread_t uthreads[THREADS_MAX_COUNT];
+uthread_t *uthreads[THREADS_MAX_COUNT];
+
+size_t uthreads_size = 0;
 
 
 int stack_create(off_t size, int thread_id, void **stack_ptr) {
@@ -52,7 +54,12 @@ int stack_create(off_t size, int thread_id, void **stack_ptr) {
 }
 
 
-int uthread_create(uthread_t **uthread_struct, void (*func)(void*), void *args) {
+void uthread_func_wrapper(void) {
+    return;
+}
+
+
+int uthread_create(uthread_t **usl, void (*func)(void*), void *args) {
     int err;
 
     void *stack;
@@ -63,9 +70,27 @@ int uthread_create(uthread_t **uthread_struct, void (*func)(void*), void *args) 
         return EAGAIN;
     }
 
-    uthread_t *uthread_struct_ptr = (uthread_t*)(STACK_SIZE - sizeof(uthread_t));
+    uthread_t *uthread_struct_ptr = (uthread_t*)(stack + STACK_SIZE - sizeof(uthread_t));
 
-    
+    err = getcontext(&uthread_struct_ptr->uc);
+    if (err == -1) {
+        printf("getcontext failed: %s", strerror(errno));
+        return EINVAL;
+    }
+
+    uthread_struct_ptr->uc.uc_stack.ss_sp = stack;
+    uthread_struct_ptr->uc.uc_stack.ss_size = STACK_SIZE - sizeof(uthread_t);
+    uthread_struct_ptr->uc.uc_link = NULL;
+
+    makecontext(&uthread_struct_ptr->uc, uthread_func_wrapper, 0);
+
+    uthread_struct_ptr->args = args;
+    uthread_struct_ptr->func = func;
+
+    uthreads[uthreads_size] = uthread_struct_ptr;
+    *usl = uthread_struct_ptr;
+
+    return 0;
 }
 
 
