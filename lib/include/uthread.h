@@ -12,7 +12,6 @@ typedef struct uthread_t {
     void *args;
 } uthread_t;
 
-
 void uthreads_init();
 
 
