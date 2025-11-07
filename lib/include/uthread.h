@@ -3,6 +3,7 @@
 #define FILE_NAME_SIZE 128
 #define STACK_SIZE 1024 * 10
 #define BASE_PRI 6
+#define MAX_PRI 12
 #define SLEEP 0
 #define RUNABLE 1
 #define RUNNING 2

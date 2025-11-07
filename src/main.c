@@ -8,9 +8,7 @@ void routine1(void *arg) {
         fflush(stdout);
 
         i++;
-        if (i > 500) {
-            uthread_set_sleepstate();
-        }
+        
         usleep(10000);
 
         priority_schedule();
@@ -22,9 +20,7 @@ void routine2(void *arg) {
     while(1) {
         
         i++;
-        if (i > 10){
-            uthread_set_sleepstate();
-        }
+        
         printf("hello 2\n");
         usleep(10000);
         fflush(stdout);

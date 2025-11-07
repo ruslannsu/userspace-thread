@@ -18,6 +18,8 @@ size_t uthreads_size = 0;
 
 size_t current_uthread = 0;
 
+size_t runnable_count = 0;
+
 int is_first_try = 1;
 
 int stack_create(off_t size, int thread_id, void **stack_ptr) {
@@ -79,7 +81,11 @@ void uthread_func_wrapper(void *arg) {
 
 
 void uthread_set_sleepstate() {
+    if (uthreads[current_uthread]->state != RUNNING) {
+        --runnable_count;
+    }
     uthreads[current_uthread]->state = SLEEP;
+
 }
 
 void schedule() {
@@ -97,31 +103,48 @@ void schedule() {
    
 }
 
+static void update_pcpu() {
+    int decay = 1;
+    for (size_t i = 0; i < uthreads_size; ++i) {
+        uthreads[i]->pri -= decay;
+    }
+
+}
+
+
+
 void priority_schedule() {
     int err;
 
     ++uthreads[current_uthread]->proc;
+    
     if (uthreads[current_uthread]->state != SLEEP) {
         uthreads[current_uthread]->state = RUNABLE;
+        ++runnable_count;
     }
+
+   // update_pcpu();
     
     ucontext_t *cur_ctx = &(uthreads[current_uthread]->uc);
 
+    size_t lim = MAX_PRI;
+    size_t old_current = current_uthread;
     for (size_t i  = 0; i < uthreads_size; ++i) {
-        if ((uthreads[i]->state == RUNABLE) && (uthreads[i]->type != MAIN)) {
-            if (current_uthread == i) {
-           //     printf("%d --!_! %d \n", current_uthread, uthreads_size);
-                return;
-            }
-
-            current_uthread = i;    
-            break;
+        if ((uthreads[i]->type != MAIN) && (uthreads[i]->pri <= lim) && (uthreads[i]->state == RUNABLE)){
+            lim = uthreads[i]->pri;
+            current_uthread = i;
+            printf("%d \n", current_uthread);
         }
     }
 
+    if ((old_current == current_uthread)) {
+        return;
+    }
 
-    printf("%d --!_! \n", current_uthread);
+    
     ucontext_t *next_ctx = &(uthreads[current_uthread]->uc);
+
+    uthreads[current_uthread]->state = RUNNING;
 
     err = swapcontext(cur_ctx, next_ctx);
     if (err == -1) {
