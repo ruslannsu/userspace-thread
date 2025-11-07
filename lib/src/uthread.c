@@ -18,6 +18,7 @@ size_t uthreads_size = 0;
 
 size_t current_uthread = 0;
 
+int is_first_try = 1;
 
 int stack_create(off_t size, int thread_id, void **stack_ptr) {
 	int stack_fd;
@@ -59,6 +60,12 @@ int stack_create(off_t size, int thread_id, void **stack_ptr) {
 void uthreads_init(uthread_t *main_thread) {
     uthreads[0] = main_thread;
     ++uthreads_size;
+
+    main_thread->proc = 0;
+    main_thread->state = RUNABLE;
+    main_thread->pri = BASE_PRI;
+    main_thread->type = MAIN;
+
 }
 
 
@@ -69,18 +76,19 @@ void uthread_func_wrapper(void *arg) {
     return;
 }
 
+
+
+void uthread_set_sleepstate() {
+    uthreads[current_uthread]->state = SLEEP;
+}
+
 void schedule() {
     int err;
 
     ucontext_t *cur_ctx = &(uthreads[current_uthread]->uc);
-    // printf("Current thread func: %p\n", uthreads[current_uthread]->func);
-     //printf("%d \n", current_uthread);
     current_uthread = (current_uthread + 1) % uthreads_size;
     ucontext_t *next_ctx = &(uthreads[current_uthread]->uc);
-    //printf("Next thread func: %p\n", uthreads[current_uthread]->func);
-    //printf("%d \n", current_uthread);
-
-
+    
     err = swapcontext(cur_ctx, next_ctx);
     if (err == -1) {
         printf("schedule failed: %s ", strerror(errno));
@@ -88,6 +96,43 @@ void schedule() {
     }
    
 }
+
+void priority_schedule() {
+    int err;
+
+    ++uthreads[current_uthread]->proc;
+    if (uthreads[current_uthread]->state != SLEEP) {
+        uthreads[current_uthread]->state = RUNABLE;
+    }
+    
+    ucontext_t *cur_ctx = &(uthreads[current_uthread]->uc);
+
+    for (size_t i  = 0; i < uthreads_size; ++i) {
+        if ((uthreads[i]->state == RUNABLE) && (uthreads[i]->type != MAIN)) {
+            if (current_uthread == i) {
+           //     printf("%d --!_! %d \n", current_uthread, uthreads_size);
+                return;
+            }
+
+            current_uthread = i;    
+            break;
+        }
+    }
+
+
+    printf("%d --!_! \n", current_uthread);
+    ucontext_t *next_ctx = &(uthreads[current_uthread]->uc);
+
+    err = swapcontext(cur_ctx, next_ctx);
+    if (err == -1) {
+        printf("schedule failed: %s ", strerror(errno));
+        exit(3);
+    }
+
+}
+
+
+
 
 
 int uthread_create(uthread_t **usl, void (*func)(void*), void *args) {
@@ -118,6 +163,10 @@ int uthread_create(uthread_t **usl, void (*func)(void*), void *args) {
 
     uthread_struct_ptr->args = args;
     uthread_struct_ptr->func = func;
+    uthread_struct_ptr->proc = 0;
+    uthread_struct_ptr->pri = BASE_PRI;
+    uthread_struct_ptr->state = RUNABLE;
+    uthread_struct_ptr->type = DEFAULT;
 
     makecontext(&uthread_struct_ptr->uc, uthread_func_wrapper, 1, uthread_struct_ptr);
     
