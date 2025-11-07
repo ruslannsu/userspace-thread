@@ -18,6 +18,8 @@ size_t uthreads_size = 0;
 
 size_t current_uthread = 0;
 
+size_t prev_thread = 0;
+
 size_t runnable_count = 0;
 
 int is_first_try = 1;
@@ -81,11 +83,9 @@ void uthread_func_wrapper(void *arg) {
 
 
 void uthread_set_sleepstate() {
-    if (uthreads[current_uthread]->state != RUNNING) {
-        --runnable_count;
-    }
+    
     uthreads[current_uthread]->state = SLEEP;
-
+    printf("THERE");
 }
 
 void schedule() {
@@ -103,10 +103,27 @@ void schedule() {
    
 }
 
-static void update_pcpu() {
-    int decay = 1;
+static void sched_cpu() {
     for (size_t i = 0; i < uthreads_size; ++i) {
-        uthreads[i]->pri -= decay;
+        uthreads[i]->proc -= 1;
+
+        if (uthreads[i]->proc < 0) {
+            uthreads[i]->proc = 0;
+        }
+    }
+
+    for (size_t i = 1; i < uthreads_size; ++i) {
+        
+        uthreads[i]->pri = 4 + (uthreads[i]->proc / 4);
+
+        if (uthreads[i]->pri < MIN_PRI) {
+            uthreads[i]->pri = 0;
+        }
+
+        if (uthreads[i]->pri > MAX_PRI) {
+            uthreads[i]->pri = MAX_PRI;
+        }
+        
     }
 
 }
@@ -114,33 +131,61 @@ static void update_pcpu() {
 
 
 void priority_schedule() {
+    srand(time(NULL));
     int err;
 
-    ++uthreads[current_uthread]->proc;
-    
+    if ((uthreads[current_uthread]->proc + 2) > MAX_PROC) {
+        uthreads[current_uthread]->proc = MAX_PROC;
+    }
+    else {
+        uthreads[current_uthread]->proc += 2;
+    }
+ 
+    sched_cpu();
+
     if (uthreads[current_uthread]->state != SLEEP) {
         uthreads[current_uthread]->state = RUNABLE;
         ++runnable_count;
     }
 
-   // update_pcpu();
-    
     ucontext_t *cur_ctx = &(uthreads[current_uthread]->uc);
 
     size_t lim = MAX_PRI;
     size_t old_current = current_uthread;
     for (size_t i  = 0; i < uthreads_size; ++i) {
+        printf(" pri %d %d\n", uthreads[i]->pri, i);
         if ((uthreads[i]->type != MAIN) && (uthreads[i]->pri <= lim) && (uthreads[i]->state == RUNABLE)){
             lim = uthreads[i]->pri;
             current_uthread = i;
-            printf("%d \n", current_uthread);
         }
     }
 
-    if ((old_current == current_uthread)) {
+
+    int pri_equals[uthreads_size - 1];
+    memset(pri_equals, 0, sizeof(pri_equals));
+
+    size_t pri_equals_index = 0;
+     
+    for (size_t i = 1; i < uthreads_size; ++i) {
+        if (uthreads[i]->pri == uthreads[current_uthread]->pri) {
+            pri_equals[pri_equals_index] = i;
+            ++pri_equals_index;
+        }
+    }
+
+    
+    int sched_index = rand() % (pri_equals_index);
+
+    
+    printf("%d\n", sched_index);
+    current_uthread = pri_equals[sched_index];
+    printf("%d", current_uthread);
+
+    if ((old_current == current_uthread) && ((uthreads[old_current]->type != MAIN))) {
         return;
     }
 
+    
     
     ucontext_t *next_ctx = &(uthreads[current_uthread]->uc);
 
@@ -190,6 +235,9 @@ int uthread_create(uthread_t **usl, void (*func)(void*), void *args) {
     uthread_struct_ptr->pri = BASE_PRI;
     uthread_struct_ptr->state = RUNABLE;
     uthread_struct_ptr->type = DEFAULT;
+    uthread_struct_ptr->reminder = 0;
+
+
 
     makecontext(&uthread_struct_ptr->uc, uthread_func_wrapper, 1, uthread_struct_ptr);
     

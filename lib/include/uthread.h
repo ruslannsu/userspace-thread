@@ -2,13 +2,16 @@
 #define PAGE_SIZE 1024
 #define FILE_NAME_SIZE 128
 #define STACK_SIZE 1024 * 10
-#define BASE_PRI 6
+#define MIN_PRI 0
+#define BASE_PRI 3
 #define MAX_PRI 12
 #define SLEEP 0
 #define RUNABLE 1
 #define RUNNING 2
+#define MAX_PROC 12
 #define MAIN 1
 #define DEFAULT 0
+
 
 #include <ucontext.h>
 
@@ -21,6 +24,7 @@ typedef struct uthread_t {
     int proc;
     int state;
     int type;
+    int reminder;
 } uthread_t;
 
 void uthreads_init();

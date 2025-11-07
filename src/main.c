@@ -9,7 +9,7 @@ void routine1(void *arg) {
 
         i++;
         
-        usleep(10000);
+        usleep(100000);
 
         priority_schedule();
     }   
@@ -22,7 +22,7 @@ void routine2(void *arg) {
         i++;
         
         printf("hello 2\n");
-        usleep(10000);
+        usleep(100000);
         fflush(stdout);
         priority_schedule();
     }
@@ -33,14 +33,27 @@ void routine3(void *arg) {
         printf("hello 3\n");
         fflush(stdout);
 
-        usleep(10000);
+        usleep(100000);
+        priority_schedule();
+    }
+}
+
+void routine4(void *arg) {
+    size_t i = 0;
+    while(1) {
+        ++i;
+       
+        printf("hello 4\n");
+        fflush(stdout);
+
+        usleep(100000);
         priority_schedule();
     }
 }
 
 int main() {
 
-    uthread_t* usl[3];
+    uthread_t* usl[4];
     
     uthread_t main_thread;
 
@@ -51,6 +64,7 @@ int main() {
     uthread_create(&usl[1], routine2, NULL);
 
     uthread_create(&usl[2], routine3, NULL);
+    uthread_create(&usl[3], routine4, NULL);
 
     for (int i = 0; i < 3; ++i) {
         printf("%p\n", usl[i]->func);
