@@ -20,7 +20,6 @@ void routine2(void *arg) {
     while(1) {
         
         i++;
-        
         printf("hello 2\n");
         usleep(100000);
         fflush(stdout);
@@ -63,8 +62,8 @@ int main() {
 
     uthread_create(&usl[1], routine2, NULL);
 
-    uthread_create(&usl[2], routine3, NULL);
-    uthread_create(&usl[3], routine4, NULL);
+    //uthread_create(&usl[2], routine3, NULL);
+ //   uthread_create(&usl[3], routine4, NULL);
 
     for (int i = 0; i < 3; ++i) {
         printf("%p\n", usl[i]->func);

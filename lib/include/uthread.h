@@ -20,6 +20,7 @@ typedef struct uthread_t {
     ucontext_t uc;
     void (*func)(void*);
     void *args;
+    int joined;
     int pri;
     int proc;
     int state;

@@ -80,8 +80,6 @@ void uthread_func_wrapper(void *arg) {
     return;
 }
 
-
-
 void uthread_set_sleepstate() {
     
     uthreads[current_uthread]->state = SLEEP;
@@ -153,7 +151,6 @@ void priority_schedule() {
     size_t lim = MAX_PRI;
     size_t old_current = current_uthread;
     for (size_t i  = 0; i < uthreads_size; ++i) {
-        printf(" pri %d %d\n", uthreads[i]->pri, i);
         if ((uthreads[i]->type != MAIN) && (uthreads[i]->pri <= lim) && (uthreads[i]->state == RUNABLE)){
             lim = uthreads[i]->pri;
             current_uthread = i;
@@ -177,16 +174,12 @@ void priority_schedule() {
     int sched_index = rand() % (pri_equals_index);
 
     
-    printf("%d\n", sched_index);
     current_uthread = pri_equals[sched_index];
-    printf("%d", current_uthread);
 
     if ((old_current == current_uthread) && ((uthreads[old_current]->type != MAIN))) {
         return;
     }
 
-    
-    
     ucontext_t *next_ctx = &(uthreads[current_uthread]->uc);
 
     uthreads[current_uthread]->state = RUNNING;
