@@ -26,12 +26,14 @@ typedef struct uthread_t {
     int state;
     int type;
     int reminder;
+    int nice_value;
+    int old_pri;
 } uthread_t;
 
 void uthreads_init();
 
 
-int uthread_create(uthread_t **uthread_struct, void (*func)(void*), void *args);
+int uthread_create(uthread_t **uthread_struct, void (*func)(void*), void *args, int nice_val);
 
 void schedule();
 

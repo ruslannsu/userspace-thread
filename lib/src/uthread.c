@@ -22,6 +22,8 @@ size_t prev_thread = 0;
 
 size_t runnable_count = 0;
 
+size_t sched_counter = 0;
+
 int is_first_try = 1;
 
 int stack_create(off_t size, int thread_id, void **stack_ptr) {
@@ -103,7 +105,7 @@ void schedule() {
 
 static void sched_cpu() {
     for (size_t i = 0; i < uthreads_size; ++i) {
-        uthreads[i]->proc -= 1;
+        uthreads[i]->proc--;
 
         if (uthreads[i]->proc < 0) {
             uthreads[i]->proc = 0;
@@ -111,8 +113,17 @@ static void sched_cpu() {
     }
 
     for (size_t i = 1; i < uthreads_size; ++i) {
+        int nice_val;
+        if ((sched_counter % 5 == 0)) {
+            nice_val = uthreads[i]->nice_value - 1;
+        }
+
+        if (sched_counter % 12 == 0) {
+            nice_val = uthreads[i]->nice_value;
+
+        }
         
-        uthreads[i]->pri = 4 + (uthreads[i]->proc / 4);
+        uthreads[i]->pri = (uthreads[i]->proc / 4) + nice_val;
 
         if (uthreads[i]->pri < MIN_PRI) {
             uthreads[i]->pri = 0;
@@ -129,7 +140,9 @@ static void sched_cpu() {
 
 
 void priority_schedule() {
+    ++sched_counter;
     srand(time(NULL));
+
     int err;
 
     if ((uthreads[current_uthread]->proc + 2) > MAX_PROC) {
@@ -196,7 +209,7 @@ void priority_schedule() {
 
 
 
-int uthread_create(uthread_t **usl, void (*func)(void*), void *args) {
+int uthread_create(uthread_t **usl, void (*func)(void*), void *args, int nice_val) {
     int err;
 
     static int thread_counter = 0;
@@ -229,6 +242,7 @@ int uthread_create(uthread_t **usl, void (*func)(void*), void *args) {
     uthread_struct_ptr->state = RUNABLE;
     uthread_struct_ptr->type = DEFAULT;
     uthread_struct_ptr->reminder = 0;
+    uthread_struct_ptr->nice_value = nice_val;
 
 
 
